@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Super Trippy Visualization</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #000; font-family: Arial, sans-serif; }
+        canvas { display: block; }
+        #controls { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.7); padding: 10px; border-radius: 5px; }
+        #controls div { margin-bottom: 5px; }
+        input[type="range"] { width: 100px; }
+        label { color: white; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <div id="controls">
+        <div><label for="shapeCount">Shape Count: </label><input type="range" id="shapeCount" min="1" max="50" value="30"></div>
+        <div><label for="colorSpeed">Color Speed: </label><input type="range" id="colorSpeed" min="0.1" max="2" step="0.1" value="0.5"></div>
+        <div><label for="maxSize">Max Size: </label><input type="range" id="maxSize" min="10" max="200" value="100"></div>
+        <div><label for="spacing">Spacing: </label><input type="range" id="spacing" min="0" max="200" value="100"></div>
+        <div><label for="collisionForce">Collision Force: </label><input type="range" id="collisionForce" min="0" max="1" step="0.1" value="0.5"></div>
+        <div><label for="rotationSpeed">Rotation Speed: </label><input type="range" id="rotationSpeed" min="0" max="0.1" step="0.001" value="0.005"></div>
+        <div><label for="pulseIntensity">Pulse Intensity: </label><input type="range" id="pulseIntensity" min="0" max="100" value="50"></div>
+        <div><label for="trailLength">Trail Length: </label><input type="range" id="trailLength" min="0" max="1" step="0.01" value="0.1"></div>
+        <div><label for="complexity">Shape Complexity: </label><input type="range" id="complexity" min="3" max="20" value="8"></div>
+        <div><label for="wobbleIntensity">Wobble Intensity: </label><input type="range" id="wobbleIntensity" min="0" max="100" value="50"></div>
+        <div><label for="speedMultiplier">Speed Multiplier: </label><input type="range" id="speedMultiplier" min="0.1" max="10" step="0.1" value="5"></div>
+    </div>
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        let width, height;
+        let time = 0;
+        let shapes = [];
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+
+        window.addEventListener('resize', resize);
+        resize();
+
+        class Shape {
+            constructor() {
+                this.reset();
+            }
+
+            reset() {
+                this.x = Math.random() * width;
+                this.y = Math.random() * height;
+                this.vx = (Math.random() - 0.5) * 2;
+                this.vy = (Math.random() - 0.5) * 2;
+                this.radius = Math.random() * 30 + 10;
+            }
+
+            update() {
+                const spacing = parseFloat(document.getElementById('spacing').value);
+                const maxSize = parseFloat(document.getElementById('maxSize').value);
+                const collisionForce = parseFloat(document.getElementById('collisionForce').value);
+                const wobbleIntensity = parseFloat(document.getElementById('wobbleIntensity').value);
+
+                this.x += this.vx;
+                this.y += this.vy;
+
+                if (this.x < 0 || this.x > width) this.vx *= -1;
+                if (this.y < 0 || this.y > height) this.vy *= -1;
+
+                shapes.forEach(other => {
+                    if (this === other) return;
+                    const dx = this.x - other.x;
+                    const dy = this.y - other.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    if (distance < spacing) {
+                        const angle = Math.atan2(dy, dx);
+                        const force = (spacing - distance) / spacing * collisionForce;
+                        this.vx += Math.cos(angle) * force;
+                        this.vy += Math.sin(angle) * force;
+                    }
+                });
+
+                this.vx *= 0.99;
+                this.vy *= 0.99;
+
+                const wobble = Math.sin(time * 0.1) * wobbleIntensity;
+                this.radius = Math.min(Math.max(this.radius + wobble, 5), maxSize);
+            }
+        }
+
+        function createShapes() {
+            const count = parseInt(document.getElementById('shapeCount').value);
+            shapes = Array(count).fill().map(() => new Shape());
+        }
+
+        function drawShape(x, y, radius, sides, rotation) {
+            ctx.beginPath();
+            for (let i = 0; i < sides; i++) {
+                const angle = rotation + (i / sides) * Math.PI * 2;
+                const x1 = x + Math.cos(angle) * radius;
+                const y1 = y + Math.sin(angle) * radius;
+                if (i === 0) ctx.moveTo(x1, y1);
+                else ctx.lineTo(x1, y1);
+            }
+            ctx.closePath();
+        }
+
+        function animate() {
+            const colorSpeed = parseFloat(document.getElementById('colorSpeed').value);
+            const rotationSpeed = parseFloat(document.getElementById('rotationSpeed').value);
+            const pulseIntensity = parseFloat(document.getElementById('pulseIntensity').value);
+            const trailLength = parseFloat(document.getElementById('trailLength').value);
+            const complexity = parseInt(document.getElementById('complexity').value);
+            const speedMultiplier = parseFloat(document.getElementById('speedMultiplier').value);
+
+            ctx.fillStyle = `rgba(0, 0, 0, ${trailLength})`;
+            ctx.fillRect(0, 0, width, height);
+
+            shapes.forEach((shape, i) => {
+                shape.update();
+
+                const hue = (time * colorSpeed + i * 30) % 360;
+                const rotation = time * rotationSpeed + i * 0.1;
+                const pulse = Math.sin(time * 0.01 + i) * pulseIntensity;
+
+                ctx.strokeStyle = `hsl(${hue}, 100%, 50%)`;
+                ctx.lineWidth = 2 + Math.sin(time * 0.01 + i) * 2;
+
+                drawShape(shape.x, shape.y, shape.radius + pulse, complexity, rotation);
+                ctx.stroke();
+
+                ctx.fillStyle = `hsla(${(hue + 180) % 360}, 100%, 50%, 0.5)`;
+                ctx.fill();
+            });
+
+            time += speedMultiplier;
+            requestAnimationFrame(animate);
+        }
+
+        createShapes();
+        animate();
+
+        // Event listeners for controls
+        document.querySelectorAll('input').forEach(input => {
+            input.addEventListener('input', () => {
+                if (input.id === 'shapeCount') {
+                    createShapes();
+                }
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rainbow Wave Patterns Visualization</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #000;
+            overflow: hidden;
+        }
+        #canvas {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        let width, height;
+        let time = 0;
+        const waves = 30;
+        const colors = [
+            '#FF0000', '#FF7F00', '#FFFF00', '#00FF00', '#0000FF', '#4B0082', '#9400D3',
+            '#FF1493', '#00FFFF', '#FF69B4', '#1E90FF', '#32CD32', '#FFD700', '#8A2BE2',
+            '#00FA9A', '#FF6347', '#7FFFD4', '#FF4500', '#00CED1', '#FF8C00'
+        ];
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+
+        window.addEventListener('resize', resize);
+        resize();
+
+        function drawWaves() {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+            ctx.fillRect(0, 0, width, height);
+
+            for (let i = 0; i < waves; i++) {
+                ctx.beginPath();
+                ctx.moveTo(0, height / 2);
+
+                for (let x = 0; x < width; x++) {
+                    const y = Math.sin(x * 0.01 + time + i * 0.5) * 20;
+                    ctx.lineTo(x, height / 2 + y + i * (height / waves) - height / 2);
+                }
+
+                ctx.strokeStyle = colors[i % colors.length];
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
+        }
+
+        function animate() {
+            drawWaves();
+            time += 0.05;
+            requestAnimationFrame(animate);
+        }
+
+        animate();
+    </script>
+</body>
+</html>

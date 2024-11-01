@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Super Trippy Flower of Life</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #000; }
+        canvas { display: block; }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        let width, height;
+        let time = 0;
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+
+        window.addEventListener('resize', resize);
+        resize();
+
+        function drawShape(x, y, radius, sides, rotation) {
+            ctx.beginPath();
+            for (let i = 0; i < sides; i++) {
+                const angle = rotation + (i / sides) * Math.PI * 2;
+                const x1 = x + Math.cos(angle) * radius;
+                const y1 = y + Math.sin(angle) * radius;
+                if (i === 0) ctx.moveTo(x1, y1);
+                else ctx.lineTo(x1, y1);
+            }
+            ctx.closePath();
+        }
+
+        function animate() {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+            ctx.fillRect(0, 0, width, height);
+
+            const centerX = width / 2;
+            const centerY = height / 2;
+
+            for (let i = 0; i < 30; i++) {
+                const scale = 1 + i * 0.2;
+                const radius = (30 * scale + Math.sin(time * 0.005 + i) * 50) * Math.sin(time * 0.001);
+                const sides = 3 + Math.floor(Math.sin(time * 0.002 + i) * 5);
+                const hue = (time * 0.5 + i * 30) % 360;
+                const rotation = time * 0.005 + i * 0.1;
+
+                ctx.strokeStyle = `hsl(${hue}, 100%, 50%)`;
+                ctx.lineWidth = 2 + Math.sin(time * 0.01 + i) * 2;
+
+                drawShape(
+                    centerX + Math.cos(time * 0.001 + i) * 100,
+                    centerY + Math.sin(time * 0.001 + i) * 100,
+                    radius,
+                    sides,
+                    rotation
+                );
+                ctx.stroke();
+
+                ctx.fillStyle = `hsla(${(hue + 180) % 360}, 100%, 50%, 0.5)`;
+                ctx.fill();
+            }
+
+            time += 5; // Increased speed
+            requestAnimationFrame(animate);
+        }
+
+        animate();
+    </script>
+</body>
+</html>

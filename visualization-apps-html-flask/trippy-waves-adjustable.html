@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Rainbow Wave Patterns Visualization</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background-color: #000;
+            color: #fff;
+            overflow: hidden;
+        }
+        #canvas {
+            display: block;
+        }
+        #controls {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background-color: rgba(30, 30, 30, 0.8);
+            padding: 10px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-around;
+            align-items: center;
+        }
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 5px;
+        }
+        label {
+            margin-bottom: 5px;
+        }
+        input[type="range"] {
+            width: 100px;
+        }
+        input[type="color"] {
+            width: 50px;
+            height: 25px;
+            border: none;
+            padding: 0;
+        }
+        select {
+            background-color: #333;
+            color: #fff;
+            border: 1px solid #555;
+        }
+    </style>
+</head>
+<body>
+    <div id="controls">
+        <div class="control-group">
+            <label for="speed">Speed</label>
+            <input type="range" id="speed" min="0.01" max="0.2" step="0.01" value="0.05">
+        </div>
+        <div class="control-group">
+            <label for="frequency">Frequency</label>
+            <input type="range" id="frequency" min="0.001" max="0.05" step="0.001" value="0.01">
+        </div>
+        <div class="control-group">
+            <label for="waves">Number of Lines</label>
+            <input type="range" id="waves" min="5" max="1000" step="1" value="30">
+        </div>
+        <div class="control-group">
+            <label for="amplitude">Amplitude</label>
+            <input type="range" id="amplitude" min="5" max="50" step="1" value="20">
+        </div>
+        <div class="control-group">
+            <label for="lineWidth">Line Width</label>
+            <input type="range" id="lineWidth" min="1" max="10" step="0.5" value="2">
+        </div>
+        <div class="control-group">
+            <label for="colorScheme">Color Scheme</label>
+            <select id="colorScheme">
+                <option value="rainbow">Rainbow</option>
+                <option value="warm">Warm</option>
+                <option value="cool">Cool</option>
+                <option value="custom">Custom</option>
+            </select>
+        </div>
+        <div class="control-group">
+            <label for="customColor">Custom Color</label>
+            <input type="color" id="customColor" value="#00ff00">
+        </div>
+        <div class="control-group">
+            <label for="backgroundColor">Background Color</label>
+            <input type="color" id="backgroundColor" value="#000000">
+        </div>
+        <div class="control-group">
+            <label for="fadeEffect">Fade Effect</label>
+            <input type="range" id="fadeEffect" min="0" max="1" step="0.05" value="0.05">
+        </div>
+        <div class="control-group">
+            <label for="waveForm">Wave Form</label>
+            <select id="waveForm">
+                <option value="sine">Sine</option>
+                <option value="square">Square</option>
+                <option value="sawtooth">Sawtooth</option>
+                <option value="triangle">Triangle</option>
+            </select>
+        </div>
+    </div>
+    <canvas id="canvas"></canvas>
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        let width, height;
+        let time = 0;
+        let waves = 30;
+        let speed = 0.05;
+        let frequency = 0.01;
+        let amplitude = 20;
+        let lineWidth = 2;
+        let colorScheme = 'rainbow';
+        let customColor = '#00ff00';
+        let backgroundColor = '#000000';
+        let fadeEffect = 0.05;
+        let waveForm = 'sine';
+
+        const colorSchemes = {
+            rainbow: ['#FF0000', '#FF7F00', '#FFFF00', '#00FF00', '#0000FF', '#4B0082', '#9400D3'],
+            warm: ['#FF4500', '#FF6347', '#FF7F50', '#FFA07A', '#FFD700', '#FFDAB9', '#FFE4B5'],
+            cool: ['#00CED1', '#48D1CC', '#40E0D0', '#7FFFD4', '#66CDAA', '#3CB371', '#2E8B57']
+        };
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+
+        window.addEventListener('resize', resize);
+        resize();
+
+        function getWaveY(x, i) {
+            const baseY = Math.sin(x * frequency + time + i * 0.5);
+            switch (waveForm) {
+                case 'square':
+                    return Math.sign(baseY);
+                case 'sawtooth':
+                    return (2 * (baseY - Math.floor(0.5 + baseY))) / Math.PI;
+                case 'triangle':
+                    return Math.abs((baseY % 1) - 0.5) * 4 - 1;
+                default: // sine
+                    return baseY;
+            }
+        }
+
+        function drawWaves() {
+            ctx.fillStyle = `rgba(${parseInt(backgroundColor.slice(1, 3), 16)}, 
+                                  ${parseInt(backgroundColor.slice(3, 5), 16)}, 
+                                  ${parseInt(backgroundColor.slice(5, 7), 16)}, 
+                                  ${fadeEffect})`;
+            ctx.fillRect(0, 0, width, height);
+
+            const colors = colorScheme === 'custom' ? [customColor] : colorSchemes[colorScheme];
+
+            for (let i = 0; i < waves; i++) {
+                ctx.beginPath();
+                ctx.moveTo(0, height / 2);
+
+                for (let x = 0; x < width; x++) {
+                    const y = getWaveY(x, i) * amplitude;
+                    ctx.lineTo(x, height / 2 + y + i * (height / waves) - height / 2);
+                }
+
+                ctx.strokeStyle = colors[i % colors.length];
+                ctx.lineWidth = lineWidth;
+                ctx.stroke();
+            }
+        }
+
+        function animate() {
+            drawWaves();
+            time += speed;
+            requestAnimationFrame(animate);
+        }
+
+        animate();
+
+        // Event listeners for controls
+        document.getElementById('speed').addEventListener('input', (e) => speed = parseFloat(e.target.value));
+        document.getElementById('frequency').addEventListener('input', (e) => frequency = parseFloat(e.target.value));
+        document.getElementById('waves').addEventListener('input', (e) => waves = parseInt(e.target.value));
+        document.getElementById('amplitude').addEventListener('input', (e) => amplitude = parseInt(e.target.value));
+        document.getElementById('lineWidth').addEventListener('input', (e) => lineWidth = parseFloat(e.target.value));
+        document.getElementById('colorScheme').addEventListener('change', (e) => colorScheme = e.target.value);
+        document.getElementById('customColor').addEventListener('input', (e) => customColor = e.target.value);
+        document.getElementById('backgroundColor').addEventListener('input', (e) => backgroundColor = e.target.value);
+        document.getElementById('fadeEffect').addEventListener('input', (e) => fadeEffect = parseFloat(e.target.value));
+        document.getElementById('waveForm').addEventListener('change', (e) => waveForm = e.target.value);
+    </script>
+</body>
+</html>
