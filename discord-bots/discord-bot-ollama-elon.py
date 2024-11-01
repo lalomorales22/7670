@@ -17,7 +17,7 @@ intents.guilds = True
 intents.message_content = True  # Add this line to enable message content intent
 
 BOT_TOKEN = 'discord bot token here'
-CHANNEL_ID = enter channel id
+CHANNEL_ID = 'enterchannelid'
 USER_NAME = "enter discord user name here"
 
 # Ollama API setup
