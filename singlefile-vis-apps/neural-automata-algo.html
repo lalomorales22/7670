@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Neural Cellular Automata Visualization</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #1a1a1a;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-family: Arial, sans-serif;
+            color: white;
+        }
+        #canvas {
+            border: 1px solid #333;
+            margin: 20px;
+        }
+        .controls {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            background: #444;
+            border: none;
+            color: white;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #555;
+        }
+        .info {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Neural Cellular Automata</h1>
+    <div class="controls">
+        <button id="reset">Reset</button>
+        <button id="pause">Pause</button>
+    </div>
+    <canvas id="canvas"></canvas>
+    <div class="info">
+        <p>Generation: <span id="generation">0</span></p>
+        <p>Active Cells: <span id="activeCells">0</span></p>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const resetBtn = document.getElementById('reset');
+        const pauseBtn = document.getElementById('pause');
+        const generationSpan = document.getElementById('generation');
+        const activeCellsSpan = document.getElementById('activeCells');
+
+        // Configuration
+        const GRID_SIZE = 100;
+        const CELL_SIZE = 5;
+        const INITIAL_ALIVE_PROB = 0.1;
+        const UPDATE_INTERVAL = 50;
+
+        // Set canvas size
+        canvas.width = GRID_SIZE * CELL_SIZE;
+        canvas.height = GRID_SIZE * CELL_SIZE;
+
+        // Neural network weights (simplified)
+        const weights = {
+            survive: [0.3, 0.2, 0.1],
+            birth: [0.4, 0.3, 0.2]
+        };
+
+        let grid = [];
+        let generation = 0;
+        let isRunning = true;
+
+        // Initialize grid
+        function initGrid() {
+            grid = [];
+            for (let i = 0; i < GRID_SIZE; i++) {
+                grid[i] = [];
+                for (let j = 0; j < GRID_SIZE; j++) {
+                    grid[i][j] = {
+                        alive: Math.random() < INITIAL_ALIVE_PROB,
+                        r: Math.random() * 255,
+                        g: Math.random() * 255,
+                        b: Math.random() * 255
+                    };
+                }
+            }
+            generation = 0;
+        }
+
+        // Get cell neighbors
+        function getNeighbors(x, y) {
+            const neighbors = [];
+            for (let i = -1; i <= 1; i++) {
+                for (let j = -1; j <= 1; j++) {
+                    if (i === 0 && j === 0) continue;
+                    const newX = (x + i + GRID_SIZE) % GRID_SIZE;
+                    const newY = (y + j + GRID_SIZE) % GRID_SIZE;
+                    neighbors.push(grid[newX][newY]);
+                }
+            }
+            return neighbors;
+        }
+
+        // Neural network activation function
+        function sigmoid(x) {
+            return 1 / (1 + Math.exp(-x));
+        }
+
+        // Update cell state using neural network rules
+        function updateCell(x, y) {
+            const cell = grid[x][y];
+            const neighbors = getNeighbors(x, y);
+            const aliveNeighbors = neighbors.filter(n => n.alive).length;
+
+            // Calculate neural inputs
+            let activationSum = 0;
+            if (cell.alive) {
+                activationSum = weights.survive.reduce((sum, w, i) => 
+                    sum + w * (aliveNeighbors / (i + 1)), 0);
+            } else {
+                activationSum = weights.birth.reduce((sum, w, i) => 
+                    sum + w * (aliveNeighbors / (i + 1)), 0);
+            }
+
+            // Update state
+            const newState = sigmoid(activationSum) > 0.5;
+
+            // If alive, update colors based on neighbors
+            if (newState) {
+                const avgColor = neighbors.reduce((acc, n) => ({
+                    r: acc.r + n.r / neighbors.length,
+                    g: acc.g + n.g / neighbors.length,
+                    b: acc.b + n.b / neighbors.length
+                }), { r: 0, g: 0, b: 0 });
+
+                // Add some mutation
+                return {
+                    alive: true,
+                    r: (avgColor.r + Math.random() * 20 - 10) % 255,
+                    g: (avgColor.g + Math.random() * 20 - 10) % 255,
+                    b: (avgColor.b + Math.random() * 20 - 10) % 255
+                };
+            }
+
+            return {
+                alive: false,
+                r: cell.r,
+                g: cell.g,
+                b: cell.b
+            };
+        }
+
+        // Update entire grid
+        function updateGrid() {
+            const newGrid = grid.map((row, x) =>
+                row.map((_, y) => updateCell(x, y))
+            );
+            grid = newGrid;
+            generation++;
+        }
+
+        // Draw grid
+        function drawGrid() {
+            let activeCells = 0;
+            for (let i = 0; i < GRID_SIZE; i++) {
+                for (let j = 0; j < GRID_SIZE; j++) {
+                    const cell = grid[i][j];
+                    if (cell.alive) {
+                        activeCells++;
+                        ctx.fillStyle = `rgb(${cell.r},${cell.g},${cell.b})`;
+                        ctx.fillRect(
+                            i * CELL_SIZE,
+                            j * CELL_SIZE,
+                            CELL_SIZE,
+                            CELL_SIZE
+                        );
+                    } else {
+                        ctx.clearRect(
+                            i * CELL_SIZE,
+                            j * CELL_SIZE,
+                            CELL_SIZE,
+                            CELL_SIZE
+                        );
+                    }
+                }
+            }
+            generationSpan.textContent = generation;
+            activeCellsSpan.textContent = activeCells;
+        }
+
+        // Animation loop
+        function animate() {
+            if (isRunning) {
+                updateGrid();
+                drawGrid();
+            }
+            setTimeout(animate, UPDATE_INTERVAL);
+        }
+
+        // Event listeners
+        resetBtn.addEventListener('click', () => {
+            initGrid();
+            drawGrid();
+        });
+
+        pauseBtn.addEventListener('click', () => {
+            isRunning = !isRunning;
+            pauseBtn.textContent = isRunning ? 'Pause' : 'Resume';
+        });
+
+        // Initialize and start
+        initGrid();
+        animate();
+
+        // Add interactivity - click to add cells
+        canvas.addEventListener('click', (event) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = Math.floor((event.clientX - rect.left) / CELL_SIZE);
+            const y = Math.floor((event.clientY - rect.top) / CELL_SIZE);
+            
+            if (x >= 0 && x < GRID_SIZE && y >= 0 && y < GRID_SIZE) {
+                grid[x][y] = {
+                    alive: true,
+                    r: Math.random() * 255,
+                    g: Math.random() * 255,
+                    b: Math.random() * 255
+                };
+                drawGrid();
+            }
+        });
+    </script>
+</body>
+</html>

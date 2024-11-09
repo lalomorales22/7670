@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Evoloops - Evolutionary Cellular Automata</title>
+    <style>
+        :root {
+            --bg-color: #0a0a0f;
+            --text-color: #e0e0e0;
+            --accent-color: #3498db;
+            --success-color: #2ecc71;
+            --warning-color: #e74c3c;
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            display: flex;
+            gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .canvas-container {
+            position: relative;
+        }
+
+        canvas {
+            border: 2px solid #333;
+            border-radius: 8px;
+            box-shadow: 0 0 20px rgba(52, 152, 219, 0.2);
+        }
+
+        .controls {
+            background: rgba(20, 20, 30, 0.9);
+            padding: 20px;
+            border-radius: 8px;
+            width: 250px;
+        }
+
+        .control-group {
+            margin-bottom: 15px;
+        }
+
+        .control-group h3 {
+            margin: 0 0 10px 0;
+            color: var(--accent-color);
+            font-size: 1em;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        button {
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 2px 8px rgba(52, 152, 219, 0.4);
+        }
+
+        .stats {
+            background: rgba(20, 20, 30, 0.9);
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            width: 100%;
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 10px;
+            background: rgba(30, 30, 40, 0.5);
+            border-radius: 4px;
+        }
+
+        .stat-label {
+            font-size: 0.8em;
+            color: #888;
+        }
+
+        .stat-value {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: var(--accent-color);
+        }
+
+        .slider-container {
+            margin: 10px 0;
+        }
+
+        .slider-container label {
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            margin: 5px 0;
+        }
+
+        .color-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 10px;
+        }
+
+        .color-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.8em;
+        }
+
+        .color-swatch {
+            width: 15px;
+            height: 15px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Evoloops Simulation</h1>
+    <div class="container">
+        <div class="canvas-container">
+            <canvas id="evoloopsCanvas"></canvas>
+        </div>
+        <div class="controls">
+            <div class="control-group">
+                <h3>Simulation Controls</h3>
+                <div class="button-group">
+                    <button id="startBtn">Start</button>
+                    <button id="pauseBtn">Pause</button>
+                    <button id="resetBtn">Reset</button>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <h3>Evolution Parameters</h3>
+                <div class="slider-container">
+                    <label>Mutation Rate: <span id="mutationRateValue">0.001</span></label>
+                    <input type="range" id="mutationRate" min="0" max="0.01" step="0.0001" value="0.001">
+                </div>
+                <div class="slider-container">
+                    <label>Selection Pressure: <span id="selectionPressureValue">0.5</span></label>
+                    <input type="range" id="selectionPressure" min="0" max="1" step="0.1" value="0.5">
+                </div>
+            </div>
+
+            <div class="control-group">
+                <h3>Environment</h3>
+                <div class="slider-container">
+                    <label>Resource Abundance: <span id="resourceValue">1.0</span></label>
+                    <input type="range" id="resourceLevel" min="0" max="2" step="0.1" value="1.0">
+                </div>
+            </div>
+
+            <div class="stats">
+                <h3>Population Statistics</h3>
+                <div class="stat-grid">
+                    <div class="stat-item">
+                        <span class="stat-label">Generation</span>
+                        <span class="stat-value" id="generationCount">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Population</span>
+                        <span class="stat-value" id="populationCount">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Average Fitness</span>
+                        <span class="stat-value" id="avgFitness">0.0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Species Count</span>
+                        <span class="stat-value" id="speciesCount">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <h3>Color Legend</h3>
+                <div class="color-legend" id="colorLegend"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Constants and Configuration
+        const GRID_SIZE = 200;
+        const CELL_SIZE = 3;
+        const INITIAL_LOOPS = 5;
+        
+        // Color scheme for different loop types and states
+        const COLORS = {
+            empty: '#000000',
+            membrane: '#3498db',
+            core: '#e74c3c',
+            catalyst: '#2ecc71',
+            resource: '#f1c40f',
+            signal: '#9b59b6',
+            mutation: '#e67e22'
+        };
+
+        // Evolutionary parameters
+        let mutationRate = 0.001;
+        let selectionPressure = 0.5;
+        let resourceLevel = 1.0;
+
+        // Canvas setup
+        const canvas = document.getElementById('evoloopsCanvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = GRID_SIZE * CELL_SIZE;
+        canvas.height = GRID_SIZE * CELL_SIZE;
+
+        // Grid and simulation state
+        let grid = [];
+        let loops = [];
+        let generation = 0;
+        let isRunning = false;
+
+        // Loop class definition
+        class Loop {
+            constructor(x, y, size, type) {
+                this.x = x;
+                this.y = y;
+                this.size = size;
+                this.type = type;
+                this.age = 0;
+                this.energy = 100;
+                this.genome = this.generateGenome();
+                this.fitness = 0;
+                this.generation = 0;
+            }
+
+            generateGenome() {
+                // Generate a random genome sequence
+                const length = 20;
+                const genes = [];
+                for (let i = 0; i < length; i++) {
+                    genes.push(Math.random());
+                }
+                return genes;
+            }
+
+            mutate() {
+                // Apply random mutations to the genome
+                const mutatedGenome = [...this.genome];
+                for (let i = 0; i < mutatedGenome.length; i++) {
+                    if (Math.random() < mutationRate) {
+                        mutatedGenome[i] += (Math.random() - 0.5) * 0.1;
+                        mutatedGenome[i] = Math.max(0, Math.min(1, mutatedGenome[i]));
+                    }
+                }
+                return mutatedGenome;
+            }
+
+            reproduce() {
+                // Create a new loop with potentially mutated genome
+                const childGenome = this.mutate();
+                const childLoop = new Loop(this.x, this.y, this.size, this.type);
+                childLoop.genome = childGenome;
+                childLoop.generation = this.generation + 1;
+                return childLoop;
+            }
+        }
+
+        // Initialize the grid
+        function initializeGrid() {
+            grid = Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(0));
+            loops = [];
+            generation = 0;
+            
+            // Create initial loops
+            for (let i = 0; i < INITIAL_LOOPS; i++) {
+                createRandomLoop();
+            }
+        }
+
+        // Create a random loop at a random position
+        function createRandomLoop() {
+            const x = Math.floor(Math.random() * (GRID_SIZE - 20));
+            const y = Math.floor(Math.random() * (GRID_SIZE - 20));
+            const size = 10 + Math.floor(Math.random() * 5);
+            const type = Math.floor(Math.random() * 3);
+            const loop = new Loop(x, y, size, type);
+            loops.push(loop);
+            placeLoopOnGrid(loop);
+        }
+
+        // Place a loop on the grid
+        function placeLoopOnGrid(loop) {
+            const pattern = generateLoopPattern(loop);
+            for (let y = 0; y < pattern.length; y++) {
+                for (let x = 0; x < pattern[y].length; x++) {
+                    const gridX = (loop.x + x) % GRID_SIZE;
+                    const gridY = (loop.y + y) % GRID_SIZE;
+                    if (pattern[y][x] !== 0) {
+                        grid[gridY][gridX] = pattern[y][x];
+                    }
+                }
+            }
+        }
+
+        // Generate a loop pattern based on the loop's genome
+        function generateLoopPattern(loop) {
+            const pattern = Array(loop.size).fill().map(() => Array(loop.size).fill(0));
+            
+            // Create outer membrane with genome-influenced variations
+            for (let i = 0; i < loop.size; i++) {
+                const geneValue = loop.genome[i % loop.genome.length];
+                const membraneType = geneValue > 0.8 ? 2 : 1; // Occasional specialized membrane segments
+                
+                pattern[0][i] = membraneType;  // Top
+                pattern[loop.size-1][i] = membraneType;  // Bottom
+                pattern[i][0] = membraneType;  // Left
+                pattern[i][loop.size-1] = membraneType;  // Right
+            }
+            
+            // Create internal structure based on genome
+            const innerSize = loop.size - 2;
+            for (let i = 0; i < loop.genome.length; i++) {
+                const geneValue = loop.genome[i];
+                const x = 1 + Math.floor(innerSize * ((i % 4) / 4));
+                const y = 1 + Math.floor(innerSize * ((i % 5) / 5));
+                
+                if (x < loop.size - 1 && y < loop.size - 1) {
+                    // Gene values determine internal cell types and structures
+                    if (geneValue < 0.3) pattern[y][x] = 3; // Catalyst
+                    else if (geneValue < 0.6) pattern[y][x] = 4; // Resource processor
+                    else if (geneValue < 0.9) pattern[y][x] = 5; // Signal molecule
+                    else pattern[y][x] = 6; // Mutation site
+                }
+            }
+            
+            return pattern;
+        }
+
+        // Calculate fitness based on structure and performance
+        function calculateFitness(loop) {
+            let fitness = 100;
+            
+            // Analyze membrane integrity
+            const membraneScore = analyzeMembrane(loop);
+            fitness += membraneScore * 50;
+            
+            // Consider internal complexity
+            const complexityScore = analyzeComplexity(loop);
+            fitness += complexityScore * 30;
+            
+            // Factor in age and survival
+            fitness += Math.min(loop.age * 0.1, 20);
+            
+            // Apply energy efficiency factor
+            fitness *= (loop.energy / 100);
+            
+            return fitness;
+        }
+
+        function analyzeMembrane(loop) {
+            // Check membrane completeness and variations
+            let membraneScore = 0;
+            const pattern = generateLoopPattern(loop);
+            
+            // Check membrane continuity
+            let hasGaps = false;
+            for (let i = 0; i < loop.size; i++) {
+                if (pattern[0][i] === 0 || pattern[loop.size-1][i] === 0 ||
+                    pattern[i][0] === 0 || pattern[i][loop.size-1] === 0) {
+                    hasGaps = true;
+                    break;
+                }
+            }
+            
+            membraneScore = hasGaps ? 0.5 : 1.0;
+            return membraneScore;
+        }
+
+        function analyzeComplexity(loop) {
+            // Evaluate internal structure complexity
+            let complexity = 0;
+            const pattern = generateLoopPattern(loop);
+            
+            // Count different cell types
+            const cellTypes = new Set();
+            for (let y = 1; y < loop.size - 1; y++) {
+                for (let x = 1; x < loop.size - 1; x++) {
+                    if (pattern[y][x] !== 0) {
+                        cellTypes.add(pattern[y][x]);
+                    }
+                }
+            }
+            
+            complexity = cellTypes.size / 4; // Normalize by maximum possible types
+            return complexity;
+        }
+
+        // Update loop positions and handle interactions
+        function updateLoops() {
+            const newLoops = [];
+            
+            for (let i = 0; i < loops.length; i++) {
+                const loop = loops[i];
+                
+                // Update energy and age
+                loop.age++;
+                loop.energy -= 0.1;
+                
+                // Handle reproduction
+                if (loop.energy > 150 && Math.random() < 0.1) {
+                    const childLoop = loop.reproduce();
+                    childLoop.x = (loop.x + Math.floor(Math.random() * 21) - 10 + GRID_SIZE) % GRID_SIZE;
+                    childLoop.y = (loop.y + Math.floor(Math.random() * 21) - 10 + GRID_SIZE) % GRID_SIZE;
+                    loop.energy *= 0.7; // Energy cost of reproduction
+                    newLoops.push(childLoop);
+                }
+                
+                // Random movement
+                if (Math.random() < 0.2) {
+                    loop.x = (loop.x + Math.floor(Math.random() * 3) - 1 + GRID_SIZE) % GRID_SIZE;
+                    loop.y = (loop.y + Math.floor(Math.random() * 3) - 1 + GRID_SIZE) % GRID_SIZE;
+                }
+                
+                // Resource gathering
+                if (Math.random() < resourceLevel * 0.1) {
+                    loop.energy += 10;
+                }
+                
+                // Survival check
+                if (loop.energy > 0) {
+                    newLoops.push(loop);
+                }
+            }
+            
+            loops = newLoops;
+        }
+
+        // Handle interactions between loops
+        function handleLoopInteractions() {
+            for (let i = 0; i < loops.length; i++) {
+                for (let j = i + 1; j < loops.length; j++) {
+                    const loop1 = loops[i];
+                    const loop2 = loops[j];
+                    
+                    // Check for collision
+                    if (checkCollision(loop1, loop2)) {
+                        // Competition for resources
+                        const fitness1 = calculateFitness(loop1);
+                        const fitness2 = calculateFitness(loop2);
+                        
+                        if (Math.abs(fitness1 - fitness2) > 50) {
+                            // Significant fitness difference leads to competition
+                            if (fitness1 > fitness2) {
+                                loop1.energy += 20;
+                                loop2.energy -= 20;
+                            } else {
+                                loop2.energy += 20;
+                                loop1.energy -= 20;
+                            }
+                        } else {
+                            // Similar fitness leads to cooperation
+                            const energyShare = 10;
+                            loop1.energy += energyShare;
+                            loop2.energy += energyShare;
+                        }
+                    }
+                }
+            }
+        }
+
+        function checkCollision(loop1, loop2) {
+            const dist = Math.sqrt(
+                Math.pow(loop1.x - loop2.x, 2) + 
+                Math.pow(loop1.y - loop2.y, 2)
+            );
+            return dist < (loop1.size + loop2.size) / 2;
+        }
+
+        // Rendering functions
+        function render() {
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Clear grid
+            grid = Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(0));
+            
+            // Update grid with current loop positions
+            loops.forEach(loop => placeLoopOnGrid(loop));
+            
+            // Render grid with glowing effects
+            for (let y = 0; y < GRID_SIZE; y++) {
+                for (let x = 0; x < GRID_SIZE; x++) {
+                    const cellType = grid[y][x];
+                    if (cellType !== 0) {
+                        const color = Object.values(COLORS)[cellType];
+                        ctx.fillStyle = color;
+                        
+                        // Add glow effect
+                        ctx.shadowColor = color;
+                        ctx.shadowBlur = 5;
+                        
+                        ctx.fillRect(
+                            x * CELL_SIZE,
+                            y * CELL_SIZE,
+                            CELL_SIZE,
+                            CELL_SIZE
+                        );
+                        
+                        ctx.shadowBlur = 0;
+                    }
+                }
+            }
+        }
+
+        // Update statistics display
+        function updateStats() {
+            document.getElementById('generationCount').textContent = generation;
+            document.getElementById('populationCount').textContent = loops.length;
+            
+            const avgFitness = loops.reduce((sum, loop) => sum + calculateFitness(loop), 0) / loops.length;
+            document.getElementById('avgFitness').textContent = avgFitness.toFixed(1);
+            
+            const species = new Set(loops.map(loop => JSON.stringify(loop.genome)));
+            document.getElementById('speciesCount').textContent = species.size;
+        }
+
+        // Main simulation loop
+        function simulate() {
+            if (!isRunning) return;
+            
+            generation++;
+            updateLoops();
+            handleLoopInteractions();
+            render();
+            updateStats();
+            
+            requestAnimationFrame(simulate);
+        }
+
+        // Event listeners for controls
+        document.getElementById('startBtn').addEventListener('click', () => {
+            isRunning = true;
+            simulate();
+        });
+
+        document.getElementById('pauseBtn').addEventListener('click', () => {
+            isRunning = false;
+        });
+
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            isRunning = false;
+            initializeGrid();
+            render();
+            updateStats();
+        });
+
+        // Slider event listeners
+        document.getElementById('mutationRate').addEventListener('input', (e) => {
+            mutationRate = parseFloat(e.target.value);
+            document.getElementById('mutationRateValue').textContent = mutationRate.toFixed(4);
+        });
+
+        document.getElementById('selectionPressure').addEventListener('input', (e) => {
+            selectionPressure = parseFloat(e.target.value);
+            document.getElementById('selectionPressureValue').textContent = selectionPressure.toFixed(1);
+        });
+
+        document.getElementById('resourceLevel').addEventListener('input', (e) => {
+            resourceLevel = parseFloat(e.target.value);
+            document.getElementById('resourceValue').textContent = resourceLevel.toFixed(1);
+        });
+
+        // Initialize color legend
+        function initializeColorLegend() {
+            const legend = document.getElementById('colorLegend');
+            Object.entries(COLORS).forEach(([name, color]) => {
+                const item = document.createElement('div');
+                item.className = 'color-item';
+                
+                const swatch = document.createElement('div');
+                swatch.className = 'color-swatch';
+                swatch.style.backgroundColor = color;
+                
+                const label = document.createElement('span');
+                label.textContent = name.charAt(0).toUpperCase() + name.slice(1);
+                
+                item.appendChild(swatch);
+                item.appendChild(label);
+                legend.appendChild(item);
+            });
+        }
+
+        // Initialize simulation
+        initializeGrid();
+        initializeColorLegend();
+        render();
+        updateStats();
+    </script>
+</body>
+</html>

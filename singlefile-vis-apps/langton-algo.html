@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Enhanced Langton's Loops Visualization</title>
+  <style>
+    body {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      background-color: #1a1a1a;
+      font-family: Arial, sans-serif;
+      color: #fff;
+    }
+    .container {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      padding: 20px;
+    }
+    canvas {
+      border: 2px solid #333;
+      border-radius: 4px;
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+    }
+    .controls {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    button {
+      padding: 8px 16px;
+      background: #333;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    button:hover {
+      background: #444;
+    }
+    .stats {
+      font-size: 14px;
+      color: #888;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <canvas id="loopCanvas"></canvas>
+    <div class="controls">
+      <button id="resetBtn">Reset</button>
+      <button id="randomizeBtn">Randomize</button>
+      <button id="pauseBtn">Pause</button>
+    </div>
+    <div class="stats" id="stats"></div>
+  </div>
+  <script>
+    const canvas = document.getElementById('loopCanvas');
+    const ctx = canvas.getContext('2d');
+    const cellSize = 4;
+    const gridWidth = 150;
+    const gridHeight = 150;
+    const colors = [
+      '#1a1a1a',    // Background
+      '#00ff00',    // Green
+      '#ff0000',    // Red
+      '#0000ff',    // Blue
+      '#ffff00',    // Yellow
+      '#ff00ff',    // Magenta
+      '#00ffff',    // Cyan
+      '#ffffff'     // White
+    ];
+    
+    let fps = 30;
+    let isPaused = false;
+    let generation = 0;
+    let activeLoops = 0;
+
+    canvas.width = gridWidth * cellSize;
+    canvas.height = gridHeight * cellSize;
+
+    let grid = createGrid(gridWidth, gridHeight);
+    
+    // Initialize multiple loops
+    initializeLoop(grid, 20, 20);
+    initializeLoop(grid, 60, 60);
+    initializeLoop(grid, 100, 100);
+    addRandomCells(grid, 0.1); // Add some random noise
+
+    function createGrid(width, height) {
+      const array = new Array(height);
+      for (let y = 0; y < height; y++) {
+        array[y] = new Array(width).fill(0);
+      }
+      return array;
+    }
+
+    function initializeLoop(grid, startX, startY) {
+      // Create a more complex loop pattern
+      const loopPattern = [
+        [1, 1, 1, 1, 1, 1, 1],
+        [1, 2, 0, 0, 0, 2, 1],
+        [1, 0, 3, 0, 3, 0, 1],
+        [1, 0, 0, 4, 0, 0, 1],
+        [1, 0, 3, 0, 3, 0, 1],
+        [1, 2, 0, 0, 0, 2, 1],
+        [1, 1, 1, 1, 1, 1, 1]
+      ];
+      
+      for (let y = 0; y < loopPattern.length; y++) {
+        for (let x = 0; x < loopPattern[y].length; x++) {
+          if (startY + y < gridHeight && startX + x < gridWidth) {
+            grid[startY + y][startX + x] = loopPattern[y][x];
+          }
+        }
+      }
+    }
+
+    function addRandomCells(grid, density) {
+      for (let y = 0; y < gridHeight; y++) {
+        for (let x = 0; x < gridWidth; x++) {
+          if (Math.random() < density) {
+            grid[y][x] = Math.floor(Math.random() * colors.length);
+          }
+        }
+      }
+    }
+
+    function drawGrid() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      for (let y = 0; y < gridHeight; y++) {
+        for (let x = 0; x < gridWidth; x++) {
+          const state = grid[y][x];
+          if (state !== 0) {  // Only draw non-background cells
+            ctx.fillStyle = colors[state];
+            // Add a glow effect for active cells
+            ctx.shadowColor = colors[state];
+            ctx.shadowBlur = 5;
+            ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+            ctx.shadowBlur = 0;
+          }
+        }
+      }
+    }
+
+    function nextGeneration() {
+      const newGrid = createGrid(gridWidth, gridHeight);
+      activeLoops = 0;
+      
+      for (let y = 0; y < gridHeight; y++) {
+        for (let x = 0; x < gridWidth; x++) {
+          const neighbors = getNeighborStates(x, y);
+          const state = grid[y][x];
+          
+          // Complex state transition rules
+          if (state === 0 && countActiveNeighbors(neighbors) >= 2) {
+            newGrid[y][x] = 1;
+            activeLoops++;
+          } else if (state > 0) {
+            // Cycle through states
+            newGrid[y][x] = (state + 1) % colors.length;
+            activeLoops++;
+          } else {
+            newGrid[y][x] = state;
+          }
+        }
+      }
+      
+      grid = newGrid;
+      generation++;
+      updateStats();
+    }
+
+    function getNeighborStates(x, y) {
+      const neighbors = [];
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          if (dx === 0 && dy === 0) continue;
+          
+          let nx = (x + dx + gridWidth) % gridWidth;
+          let ny = (y + dy + gridHeight) % gridHeight;
+          
+          neighbors.push(grid[ny][nx]);
+        }
+      }
+      return neighbors;
+    }
+
+    function countActiveNeighbors(neighbors) {
+      return neighbors.filter(state => state > 0).length;
+    }
+
+    function updateStats() {
+      const statsElement = document.getElementById('stats');
+      statsElement.textContent = `Generation: ${generation} | Active Loops: ${activeLoops}`;
+    }
+
+    function reset() {
+      grid = createGrid(gridWidth, gridHeight);
+      initializeLoop(grid, 20, 20);
+      initializeLoop(grid, 60, 60);
+      initializeLoop(grid, 100, 100);
+      generation = 0;
+      updateStats();
+    }
+
+    function randomize() {
+      grid = createGrid(gridWidth, gridHeight);
+      addRandomCells(grid, 0.3);
+      generation = 0;
+      updateStats();
+    }
+
+    let lastTime = 0;
+    function gameLoop(timestamp) {
+      if (!isPaused) {
+        const deltaTime = timestamp - lastTime;
+        
+        if (deltaTime >= 1000 / fps) {
+          drawGrid();
+          nextGeneration();
+          lastTime = timestamp;
+        }
+      }
+      requestAnimationFrame(gameLoop);
+    }
+
+    // Event Listeners
+    document.getElementById('resetBtn').addEventListener('click', reset);
+    document.getElementById('randomizeBtn').addEventListener('click', randomize);
+    document.getElementById('pauseBtn').addEventListener('click', () => {
+      isPaused = !isPaused;
+      document.getElementById('pauseBtn').textContent = isPaused ? 'Resume' : 'Pause';
+    });
+
+    // Start the animation
+    requestAnimationFrame(gameLoop);
+
+    // Add mouse interaction
+    canvas.addEventListener('click', (event) => {
+      const rect = canvas.getBoundingClientRect();
+      const x = Math.floor((event.clientX - rect.left) / cellSize);
+      const y = Math.floor((event.clientY - rect.top) / cellSize);
+      
+      if (x >= 0 && x < gridWidth && y >= 0 && y < gridHeight) {
+        // Create a small pattern at click location
+        for (let dy = -1; dy <= 1; dy++) {
+          for (let dx = -1; dx <= 1; dx++) {
+            const nx = (x + dx + gridWidth) % gridWidth;
+            const ny = (y + dy + gridHeight) % gridHeight;
+            grid[ny][nx] = Math.floor(Math.random() * (colors.length - 1)) + 1;
+          }
+        }
+      }
+    });
+  </script>
+</body>
+</html>

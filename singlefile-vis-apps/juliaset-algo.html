@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Mathematical Visualizations - Set 2</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        #controls {
+            width: 300px;
+            float: left;
+            padding: 20px;
+            box-sizing: border-box;
+            background-color: #f0f0f0;
+            height: 100vh;
+            overflow-y: auto;
+        }
+        #visualization {
+            margin-left: 300px;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        h2 {
+            margin-top: 0;
+        }
+        .algorithm-section {
+            margin-bottom: 40px;
+        }
+        canvas {
+            border: 1px solid #ccc;
+            background-color: #fff;
+        }
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+        }
+        .slider {
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div id="controls">
+        <h2>Algorithms</h2>
+        <form id="algorithm-form">
+            <div>
+                <input type="radio" id="juliaset" name="algorithm" value="juliaset" checked>
+                <label for="juliaset">Julia Set</label>
+            </div>
+            <div>
+                <input type="radio" id="langtonsant" name="algorithm" value="langtonsant">
+                <label for="langtonsant">Langton’s Ant</label>
+            </div>
+            <div>
+                <input type="radio" id="barnsleyfern" name="algorithm" value="barnsleyfern">
+                <label for="barnsleyfern">Barnsley Fern</label>
+            </div>
+            <div>
+                <input type="radio" id="harmonograph" name="algorithm" value="harmonograph">
+                <label for="harmonograph">Harmonograph</label>
+            </div>
+            <div>
+                <input type="radio" id="voronoidiagram" name="algorithm" value="voronoidiagram">
+                <label for="voronoidiagram">Voronoi Diagram</label>
+            </div>
+        </form>
+
+        <div id="algorithm-controls">
+            <!-- Controls will be dynamically added here -->
+        </div>
+    </div>
+    <div id="visualization">
+        <canvas id="canvas" width="800" height="600"></canvas>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const algorithmForm = document.getElementById('algorithm-form');
+        const algorithmControls = document.getElementById('algorithm-controls');
+
+        let animationFrameId;
+
+        // Algorithms implementations
+        const algorithms = {
+            juliaset: {
+                init: function() {
+                    algorithmControls.innerHTML = `
+                        <h3>Julia Set Controls</h3>
+                        <div>
+                            <label class="slider-label">
+                                <span>Real Part (c<sub>r</sub>):</span>
+                                <span id="julia-cr-value">-0.7</span>
+                            </label>
+                            <input type="range" id="julia-cr" min="-1" max="1" step="0.01" value="-0.7" class="slider">
+                        </div>
+                        <div>
+                            <label class="slider-label">
+                                <span>Imaginary Part (c<sub>i</sub>):</span>
+                                <span id="julia-ci-value">0.27015</span>
+                            </label>
+                            <input type="range" id="julia-ci" min="-1" max="1" step="0.01" value="0.27015" class="slider">
+                        </div>
+                        <button id="julia-draw">Draw</button>
+                    `;
+                    ['julia-cr', 'julia-ci'].forEach(id => {
+                        document.getElementById(id).addEventListener('input', () => {
+                            document.getElementById(id + '-value').textContent = document.getElementById(id).value;
+                        });
+                    });
+                    document.getElementById('julia-draw').addEventListener('click', () => {
+                        this.draw();
+                    });
+                    this.draw();
+                },
+                draw: function() {
+                    const width = canvas.width;
+                    const height = canvas.height;
+                    const imgData = ctx.createImageData(width, height);
+                    const maxIter = 100;
+                    const zoom = 1;
+
+                    const cr = parseFloat(document.getElementById('julia-cr').value);
+                    const ci = parseFloat(document.getElementById('julia-ci').value);
+
+                    for (let x = 0; x < width; x++) {
+                        for (let y = 0; y < height; y++) {
+                            let zx = 1.5 * (x - width / 2) / (0.5 * zoom * width);
+                            let zy = (y - height / 2) / (0.5 * zoom * height);
+                            let i = maxIter;
+                            while (zx * zx + zy * zy < 4 && i > 0) {
+                                let tmp = zx * zx - zy * zy + cr;
+                                zy = 2.0 * zx * zy + ci;
+                                zx = tmp;
+                                i--;
+                            }
+                            const pix = (x + y * width) * 4;
+                            const c = i === 0 ? 0 : (maxIter - i) * 255 / maxIter;
+                            imgData.data[pix] = c;
+                            imgData.data[pix + 1] = c;
+                            imgData.data[pix + 2] = c;
+                            imgData.data[pix + 3] = 255;
+                        }
+                    }
+                    ctx.putImageData(imgData, 0, 0);
+                }
+            },
+            langtonsant: {
+                grid: [],
+                cols: 0,
+                rows: 0,
+                cellSize: 5,
+                ant: { x: 0, y: 0, dir: 0 },
+                init: function() {
+                    algorithmControls.innerHTML = `
+                        <h3>Langton's Ant Controls</h3>
+                        <button id="ant-start">Start</button>
+                        <button id="ant-reset">Reset</button>
+                    `;
+                    document.getElementById('ant-start').addEventListener('click', () => {
+                        this.animate();
+                    });
+                    document.getElementById('ant-reset').addEventListener('click', () => {
+                        this.setup();
+                    });
+                    this.setup();
+                },
+                setup: function() {
+                    cancelAnimationFrame(animationFrameId);
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    this.cols = Math.floor(canvas.width / this.cellSize);
+                    this.rows = Math.floor(canvas.height / this.cellSize);
+                    this.grid = Array.from({ length: this.cols }, () => Array(this.rows).fill(0));
+                    this.ant = { x: Math.floor(this.cols / 2), y: Math.floor(this.rows / 2), dir: 0 };
+                    this.draw();
+                },
+                draw: function() {
+                    for (let i = 0; i < this.cols; i++) {
+                        for (let j = 0; j < this.rows; j++) {
+                            const x = i * this.cellSize;
+                            const y = j * this.cellSize;
+                            ctx.fillStyle = this.grid[i][j] === 0 ? '#fff' : '#000';
+                            ctx.fillRect(x, y, this.cellSize, this.cellSize);
+                        }
+                    }
+                    // Draw the ant
+                    ctx.fillStyle = 'red';
+                    ctx.fillRect(this.ant.x * this.cellSize, this.ant.y * this.cellSize, this.cellSize, this.cellSize);
+                },
+                update: function() {
+                    const { x, y, dir } = this.ant;
+                    const state = this.grid[x][y];
+                    // Turn right if square is white, left if black
+                    this.ant.dir = (dir + (state === 0 ? 1 : 3)) % 4;
+                    // Flip the color of the square
+                    this.grid[x][y] = state === 0 ? 1 : 0;
+                    // Move forward
+                    switch (this.ant.dir) {
+                        case 0: this.ant.y = (y - 1 + this.rows) % this.rows; break;
+                        case 1: this.ant.x = (x + 1) % this.cols; break;
+                        case 2: this.ant.y = (y + 1) % this.rows; break;
+                        case 3: this.ant.x = (x - 1 + this.cols) % this.cols; break;
+                    }
+                },
+                animate: function() {
+                    for (let i = 0; i < 100; i++) { // Speed up the ant by updating multiple times per frame
+                        this.update();
+                    }
+                    this.draw();
+                    animationFrameId = requestAnimationFrame(this.animate.bind(this));
+                }
+            },
+            barnsleyfern: {
+                points: [],
+                init: function() {
+                    algorithmControls.innerHTML = `
+                        <h3>Barnsley Fern Controls</h3>
+                        <div>
+                            <label class="slider-label">
+                                <span>Iterations:</span>
+                                <span id="fern-iterations-value">100000</span>
+                            </label>
+                            <input type="range" id="fern-iterations" min="10000" max="200000" step="10000" value="100000" class="slider">
+                        </div>
+                        <button id="fern-draw">Draw</button>
+                    `;
+                    document.getElementById('fern-iterations').addEventListener('input', () => {
+                        document.getElementById('fern-iterations-value').textContent = document.getElementById('fern-iterations').value;
+                    });
+                    document.getElementById('fern-draw').addEventListener('click', () => {
+                        this.draw();
+                    });
+                    this.draw();
+                },
+                draw: function() {
+                    const iterations = parseInt(document.getElementById('fern-iterations').value);
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    let x = 0;
+                    let y = 0;
+                    for (let i = 0; i < iterations; i++) {
+                        const r = Math.random();
+                        let xNew, yNew;
+                        if (r < 0.01) {
+                            xNew = 0;
+                            yNew = 0.16 * y;
+                        } else if (r < 0.86) {
+                            xNew = 0.85 * x + 0.04 * y;
+                            yNew = -0.04 * x + 0.85 * y + 1.6;
+                        } else if (r < 0.93) {
+                            xNew = 0.2 * x - 0.26 * y;
+                            yNew = 0.23 * x + 0.22 * y + 1.6;
+                        } else {
+                            xNew = -0.15 * x + 0.28 * y;
+                            yNew = 0.26 * x + 0.24 * y + 0.44;
+                        }
+                        x = xNew;
+                        y = yNew;
+                        const px = Math.floor(canvas.width / 2 + x * 50);
+                        const py = Math.floor(canvas.height - y * 50);
+                        ctx.fillStyle = 'green';
+                        ctx.fillRect(px, py, 1, 1);
+                    }
+                }
+            },
+            harmonograph: {
+                init: function() {
+                    algorithmControls.innerHTML = `
+                        <h3>Harmonograph Controls</h3>
+                        <div>
+                            <label class="slider-label">
+                                <span>Frequency X1:</span>
+                                <span id="harm-freqx1-value">2</span>
+                            </label>
+                            <input type="range" id="harm-freqx1" min="1" max="10" step="0.1" value="2" class="slider">
+                        </div>
+                        <div>
+                            <label class="slider-label">
+                                <span>Frequency Y1:</span>
+                                <span id="harm-freqy1-value">3</span>
+                            </label>
+                            <input type="range" id="harm-freqy1" min="1" max="10" step="0.1" value="3" class="slider">
+                        </div>
+                        <button id="harm-draw">Draw</button>
+                    `;
+                    ['harm-freqx1', 'harm-freqy1'].forEach(id => {
+                        document.getElementById(id).addEventListener('input', () => {
+                            document.getElementById(id + '-value').textContent = document.getElementById(id).value;
+                        });
+                    });
+                    document.getElementById('harm-draw').addEventListener('click', () => {
+                        this.draw();
+                    });
+                    this.draw();
+                },
+                draw: function() {
+                    const freqX1 = parseFloat(document.getElementById('harm-freqx1').value);
+                    const freqY1 = parseFloat(document.getElementById('harm-freqy1').value);
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.save();
+                    ctx.translate(canvas.width / 2, canvas.height / 2);
+                    ctx.beginPath();
+                    for (let t = 0; t < 100; t += 0.01) {
+                        const x = Math.sin(t * freqX1) * Math.exp(-t * 0.01);
+                        const y = Math.sin(t * freqY1) * Math.exp(-t * 0.01);
+                        ctx.lineTo(x * 200, y * 200);
+                    }
+                    ctx.strokeStyle = 'blue';
+                    ctx.stroke();
+                    ctx.restore();
+                }
+            },
+            voronoidiagram: {
+                points: [],
+                init: function() {
+                    algorithmControls.innerHTML = `
+                        <h3>Voronoi Diagram Controls</h3>
+                        <div>
+                            <label class="slider-label">
+                                <span>Number of Points:</span>
+                                <span id="voronoi-points-value">10</span>
+                            </label>
+                            <input type="range" id="voronoi-points" min="5" max="50" step="1" value="10" class="slider">
+                        </div>
+                        <button id="voronoi-generate">Generate</button>
+                    `;
+                    document.getElementById('voronoi-points').addEventListener('input', () => {
+                        document.getElementById('voronoi-points-value').textContent = document.getElementById('voronoi-points').value;
+                    });
+                    document.getElementById('voronoi-generate').addEventListener('click', () => {
+                        this.generate();
+                    });
+                    this.generate();
+                },
+                generate: function() {
+                    const numPoints = parseInt(document.getElementById('voronoi-points').value);
+                    this.points = [];
+                    for (let i = 0; i < numPoints; i++) {
+                        this.points.push({
+                            x: Math.random() * canvas.width,
+                            y: Math.random() * canvas.height,
+                            color: `hsl(${Math.random() * 360}, 100%, 75%)`
+                        });
+                    }
+                    this.draw();
+                },
+                draw: function() {
+                    const imgData = ctx.createImageData(canvas.width, canvas.height);
+                    for (let x = 0; x < canvas.width; x++) {
+                        for (let y = 0; y < canvas.height; y++) {
+                            let minDist = Infinity;
+                            let closestPoint = null;
+                            for (let point of this.points) {
+                                const dx = x - point.x;
+                                const dy = y - point.y;
+                                const dist = dx * dx + dy * dy;
+                                if (dist < minDist) {
+                                    minDist = dist;
+                                    closestPoint = point;
+                                }
+                            }
+                            const pix = (x + y * canvas.width) * 4;
+                            const color = this.hexToRgb(closestPoint.color);
+                            imgData.data[pix] = color.r;
+                            imgData.data[pix + 1] = color.g;
+                            imgData.data[pix + 2] = color.b;
+                            imgData.data[pix + 3] = 255;
+                        }
+                    }
+                    ctx.putImageData(imgData, 0, 0);
+                    // Draw points
+                    for (let point of this.points) {
+                        ctx.fillStyle = '#000';
+                        ctx.beginPath();
+                        ctx.arc(point.x, point.y, 3, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                },
+                hexToRgb: function(hex) {
+                    const shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
+                    hex = hex.replace(shorthandRegex, function(m, r, g, b) {
+                        return r + r + g + g + b + b;
+                    });
+                    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+                    return result ? {
+                        r: parseInt(result[1], 16),
+                        g: parseInt(result[2], 16),
+                        b: parseInt(result[3], 16)
+                    } : { r: 0, g: 0, b: 0 };
+                }
+            }
+        };
+
+        // Event listeners
+        algorithmForm.addEventListener('change', (e) => {
+            const selectedAlgorithm = document.querySelector('input[name="algorithm"]:checked').value;
+            cancelAnimationFrame(animationFrameId);
+            if (algorithms[selectedAlgorithm]) {
+                algorithms[selectedAlgorithm].init();
+            }
+        });
+
+        // Initialize the first algorithm
+        algorithms.juliaset.init();
+
+    </script>
+</body>
+</html>

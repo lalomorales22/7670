@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Ultimate Trippy Visualizations</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #000;
+            color: #fff;
+            font-family: 'Courier New', Courier, monospace;
+        }
+        #canvas {
+            display: block;
+            position: absolute;
+            top: 60px;
+            left: 250px;
+            width: calc(100% - 250px);
+            height: calc(100% - 60px);
+        }
+        #sidebar {
+            position: fixed;
+            top: 60px;
+            left: 0;
+            width: 250px;
+            height: calc(100% - 60px);
+            background: rgba(20, 20, 20, 0.95);
+            padding: 20px;
+            box-sizing: border-box;
+            overflow-y: auto;
+            border-right: 1px solid #444;
+        }
+        #sidebar h2 {
+            margin-top: 0;
+            text-align: center;
+            font-size: 24px;
+        }
+        #sidebar button {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 10px;
+            background: #333;
+            color: #fff;
+            border: 1px solid #555;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.3s;
+        }
+        #sidebar button:hover {
+            background: #555;
+        }
+        #topbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 60px;
+            background: linear-gradient(90deg, #000, #333);
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            box-sizing: border-box;
+            z-index: 1000;
+            border-bottom: 1px solid #444;
+        }
+        #topbar h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: bold;
+            background: -webkit-linear-gradient(#fff, #aaa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        #controls {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+        }
+        #controls label {
+            margin-right: 10px;
+            font-size: 16px;
+        }
+        #controls input[type="range"] {
+            width: 150px;
+        }
+        #controls input[type="color"] {
+            margin-right: 20px;
+        }
+        /* Animations */
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 10px #fff; }
+            50% { box-shadow: 0 0 20px #fff; }
+        }
+        #sidebar button.active {
+            background: #007BFF;
+            animation: pulse 2s infinite;
+        }
+    </style>
+</head>
+<body>
+    <div id="topbar">
+        <h1>Ultimate Trippy Visualizations</h1>
+        <div id="controls">
+            <label for="speedControl">Speed:</label>
+            <input type="range" id="speedControl" min="1" max="30" value="5">
+            <input type="color" id="colorControl" value="#ff0000">
+            <button id="fullscreenBtn">Fullscreen</button>
+        </div>
+    </div>
+    <div id="sidebar">
+        <h2>Visualizations</h2>
+        <button data-mode="flowerOfLife">Flower of Life</button>
+        <button data-mode="sacredGeometry">Sacred Geometry</button>
+        <button data-mode="galaxy">Galaxy</button>
+        <button data-mode="fractalTree">Fractal Tree</button>
+        <button data-mode="mandelbrotSet">Mandelbrot Set</button>
+        <button data-mode="juliaSet">Julia Set</button>
+        <button data-mode="particleSystem">Particle System</button>
+        <button data-mode="spirograph">Spirograph</button>
+        <button data-mode="kaleidoscope">Kaleidoscope</button>
+        <button data-mode="metaballs">Metaballs</button>
+        <button data-mode="hypnoticSpirals">Hypnotic Spirals</button>
+        <button data-mode="wavePatterns">Wave Patterns</button>
+        <button data-mode="neuralNetwork">Neural Network</button>
+        <button data-mode="cosmicWeb">Cosmic Web</button>
+        <button data-mode="plasma">Plasma</button>
+        <button data-mode="rainbowTunnel">Rainbow Tunnel</button>
+        <button data-mode="electricField">Electric Field</button>
+        <button data-mode="fireworks">Fireworks</button>
+        <button data-mode="liquidMetal">Liquid Metal</button>
+        <button data-mode="starfield">Starfield</button>
+    </div>
+    <canvas id="canvas"></canvas>
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const sidebarButtons = document.querySelectorAll('#sidebar button');
+        const speedControl = document.getElementById('speedControl');
+        const colorControl = document.getElementById('colorControl');
+        const fullscreenBtn = document.getElementById('fullscreenBtn');
+
+        let width, height;
+        let time = 0;
+        let speed = 5;
+        let baseColor = '#ff0000';
+        let currentMode = 'flowerOfLife';
+
+        function resize() {
+            canvas.width = width = window.innerWidth - 250;
+            canvas.height = height = window.innerHeight - 60;
+            canvas.style.top = '60px';
+            canvas.style.left = '250px';
+        }
+
+        window.addEventListener('resize', resize);
+        resize();
+
+        speedControl.addEventListener('input', function() {
+            speed = parseInt(this.value);
+        });
+
+        colorControl.addEventListener('input', function() {
+            baseColor = this.value;
+        });
+
+        fullscreenBtn.addEventListener('click', () => {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+                fullscreenBtn.textContent = 'Exit Fullscreen';
+            } else {
+                document.exitFullscreen();
+                fullscreenBtn.textContent = 'Fullscreen';
+            }
+        });
+
+        sidebarButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                currentMode = this.getAttribute('data-mode');
+                time = 0; // Reset time to start animations fresh
+                document.querySelector('#sidebar button.active')?.classList.remove('active');
+                this.classList.add('active');
+            });
+        });
+
+        function animate() {
+            ctx.clearRect(0, 0, width, height);
+            switch (currentMode) {
+                case 'flowerOfLife':
+                    drawFlowerOfLife();
+                    break;
+                case 'sacredGeometry':
+                    drawSacredGeometry();
+                    break;
+                case 'galaxy':
+                    drawGalaxy();
+                    break;
+                case 'fractalTree':
+                    drawFractalTree();
+                    break;
+                case 'mandelbrotSet':
+                    drawMandelbrotSet();
+                    break;
+                case 'juliaSet':
+                    drawJuliaSet();
+                    break;
+                case 'particleSystem':
+                    drawParticleSystem();
+                    break;
+                case 'spirograph':
+                    drawSpirograph();
+                    break;
+                case 'kaleidoscope':
+                    drawKaleidoscope();
+                    break;
+                case 'metaballs':
+                    drawMetaballs();
+                    break;
+                case 'hypnoticSpirals':
+                    drawHypnoticSpirals();
+                    break;
+                case 'wavePatterns':
+                    drawWavePatterns();
+                    break;
+                case 'neuralNetwork':
+                    drawNeuralNetwork();
+                    break;
+                case 'cosmicWeb':
+                    drawCosmicWeb();
+                    break;
+                case 'plasma':
+                    drawPlasma();
+                    break;
+                case 'rainbowTunnel':
+                    drawRainbowTunnel();
+                    break;
+                case 'electricField':
+                    drawElectricField();
+                    break;
+                case 'fireworks':
+                    drawFireworks();
+                    break;
+                case 'liquidMetal':
+                    drawLiquidMetal();
+                    break;
+                case 'starfield':
+                    drawStarfield();
+                    break;
+                default:
+                    drawFlowerOfLife();
+            }
+            time += speed;
+            requestAnimationFrame(animate);
+        }
+
+        // Visualization Functions
+
+        function drawFlowerOfLife() {
+            const cols = 15;
+            const rows = 15;
+            const radius = 30;
+            for (let i = -cols; i < cols; i++) {
+                for (let j = -rows; j < rows; j++) {
+                    const x = width / 2 + i * radius * 1.5 + Math.sin(time * 0.005 + j) * 20;
+                    const y = height / 2 + j * radius * 1.732 + Math.cos(time * 0.005 + i) * 20;
+                    ctx.beginPath();
+                    ctx.arc(x, y, radius, 0, Math.PI * 2);
+                    ctx.strokeStyle = `hsl(${(time + i * 20) % 360}, 100%, 50%)`;
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                }
+            }
+        }
+
+        function drawSacredGeometry() {
+            ctx.save();
+            ctx.translate(width / 2, height / 2);
+            for (let i = 0; i < 24; i++) {
+                ctx.rotate(Math.PI / 12);
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(0, -300 + Math.sin(time * 0.01 + i) * 100);
+                ctx.strokeStyle = `hsl(${(time + i * 30) % 360}, 100%, 50%)`;
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
+            ctx.restore();
+        }
+
+        function drawGalaxy() {
+            for (let i = 0; i < 2000; i++) {
+                const angle = i * 0.05 + time * 0.0005;
+                const radius = i * 0.2;
+                const x = width / 2 + radius * Math.cos(angle);
+                const y = height / 2 + radius * Math.sin(angle);
+                ctx.fillStyle = `hsla(${(i + time) % 360}, 100%, 50%, 0.7)`;
+                ctx.beginPath();
+                ctx.arc(x, y, 1.5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function drawFractalTree(x = width / 2, y = height, angle = -Math.PI / 2, depth = 12) {
+            if (depth === 0) return;
+            const length = depth * 12;
+            const x2 = x + Math.cos(angle) * length;
+            const y2 = y + Math.sin(angle) * length;
+            ctx.strokeStyle = `hsl(${(time + depth * 20) % 360}, 100%, 50%)`;
+            ctx.lineWidth = depth * 0.8;
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.lineTo(x2, y2);
+            ctx.stroke();
+            drawFractalTree(x2, y2, angle - 0.3 + Math.sin(time * 0.01) * 0.2, depth - 1);
+            drawFractalTree(x2, y2, angle + 0.3 + Math.cos(time * 0.01) * 0.2, depth - 1);
+        }
+
+        function drawMandelbrotSet() {
+            const imgData = ctx.createImageData(width, height);
+            const maxIter = 200;
+            for (let px = 0; px < width; px++) {
+                for (let py = 0; py < height; py++) {
+                    let x0 = (px / width) * 3.5 - 2.5;
+                    let y0 = (py / height) * 2 - 1;
+                    let x = 0;
+                    let y = 0;
+                    let iteration = 0;
+                    while (x * x + y * y <= 4 && iteration < maxIter) {
+                        let xtemp = x * x - y * y + x0;
+                        y = 2 * x * y + y0;
+                        x = xtemp;
+                        iteration++;
+                    }
+                    const index = (px + py * width) * 4;
+                    const color = iteration === maxIter ? 0 : (iteration / maxIter) * 255;
+                    imgData.data[index] = color;
+                    imgData.data[index + 1] = color;
+                    imgData.data[index + 2] = color;
+                    imgData.data[index + 3] = 255;
+                }
+            }
+            ctx.putImageData(imgData, 0, 0);
+        }
+
+        function drawJuliaSet() {
+            const imgData = ctx.createImageData(width, height);
+            const maxIter = 200;
+            const cx = Math.cos(time * 0.001) * 0.7885;
+            const cy = Math.sin(time * 0.001) * 0.7885;
+            for (let px = 0; px < width; px++) {
+                for (let py = 0; py < height; py++) {
+                    let x = (px / width) * 3.5 - 1.75;
+                    let y = (py / height) * 2 - 1;
+                    let iteration = 0;
+                    while (x * x + y * y <= 4 && iteration < maxIter) {
+                        let xtemp = x * x - y * y + cx;
+                        y = 2 * x * y + cy;
+                        x = xtemp;
+                        iteration++;
+                    }
+                    const index = (px + py * width) * 4;
+                    const color = iteration === maxIter ? 0 : (iteration / maxIter) * 255;
+                    imgData.data[index] = color;
+                    imgData.data[index + 1] = color;
+                    imgData.data[index + 2] = color;
+                    imgData.data[index + 3] = 255;
+                }
+            }
+            ctx.putImageData(imgData, 0, 0);
+        }
+
+        let particles = [];
+        function initParticles() {
+            particles = [];
+            for (let i = 0; i < 1000; i++) {
+                particles.push({
+                    x: width / 2,
+                    y: height / 2,
+                    vx: (Math.random() - 0.5) * 4,
+                    vy: (Math.random() - 0.5) * 4,
+                    hue: Math.random() * 360
+                });
+            }
+        }
+        initParticles();
+
+        function drawParticleSystem() {
+            particles.forEach(p => {
+                p.x += p.vx * speed * 0.1;
+                p.y += p.vy * speed * 0.1;
+                p.hue += 1;
+                if (p.x < 0 || p.x > width || p.y < 0 || p.y > height) {
+                    p.x = width / 2;
+                    p.y = height / 2;
+                }
+                ctx.fillStyle = `hsla(${p.hue % 360}, 100%, 50%, 0.5)`;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 1.5, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        function drawSpirograph() {
+            ctx.save();
+            ctx.translate(width / 2, height / 2);
+            ctx.beginPath();
+            for (let t = 0; t < Math.PI * 2; t += 0.01) {
+                const R = 150;
+                const r = 60;
+                const O = 60;
+                const x = (R - r) * Math.cos(t) + O * Math.cos(((R - r) / r) * t);
+                const y = (R - r) * Math.sin(t) - O * Math.sin(((R - r) / r) * t);
+                ctx.lineTo(x, y);
+            }
+            ctx.strokeStyle = `hsl(${(time * 0.1) % 360}, 100%, 50%)`;
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        function drawKaleidoscope() {
+            ctx.save();
+            ctx.translate(width / 2, height / 2);
+            const numSlices = 24;
+            for (let i = 0; i < numSlices; i++) {
+                ctx.save();
+                ctx.rotate((Math.PI * 2 / numSlices) * i + time * 0.001);
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(0, -300);
+                ctx.strokeStyle = `hsl(${(time + i * 15) % 360}, 100%, 50%)`;
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                ctx.restore();
+            }
+            ctx.restore();
+        }
+
+        function drawMetaballs() {
+            const numBalls = 20;
+            const positions = [];
+            for (let i = 0; i < numBalls; i++) {
+                const x = width / 2 + Math.cos(time * 0.01 + i) * 300;
+                const y = height / 2 + Math.sin(time * 0.01 + i) * 300;
+                positions.push({ x, y });
+            }
+            for (let x = 0; x < width; x += 5) {
+                for (let y = 0; y < height; y += 5) {
+                    let sum = 0;
+                    positions.forEach(p => {
+                        const dx = x - p.x;
+                        const dy = y - p.y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        sum += 100 / dist;
+                    });
+                    if (sum >= 10) {
+                        ctx.fillStyle = `hsl(${(sum * 20 + time) % 360}, 100%, 50%)`;
+                        ctx.fillRect(x, y, 5, 5);
+                    }
+                }
+            }
+        }
+
+        function drawHypnoticSpirals() {
+            ctx.save();
+            ctx.translate(width / 2, height / 2);
+            for (let i = 0; i < 1000; i++) {
+                const angle = 0.1 * i + time * 0.005;
+                const radius = 0.5 * i;
+                const x = radius * Math.cos(angle);
+                const y = radius * Math.sin(angle);
+                ctx.fillStyle = `hsl(${(i + time) % 360}, 100%, 50%)`;
+                ctx.beginPath();
+                ctx.arc(x, y, 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.restore();
+        }
+
+        function drawWavePatterns() {
+            for (let y = 0; y < height; y += 10) {
+                ctx.beginPath();
+                for (let x = 0; x < width; x += 10) {
+                    const angle = (x + y + time) * 0.02;
+                    const offset = Math.sin(angle) * 20;
+                    ctx.lineTo(x, y + offset);
+                }
+                ctx.strokeStyle = `hsl(${(y + time) % 360}, 100%, 50%)`;
+                ctx.stroke();
+            }
+        }
+
+        function drawNeuralNetwork() {
+            for (let i = 0; i < 500; i++) {
+                const x = Math.random() * width;
+                const y = Math.random() * height;
+                const x2 = x + Math.cos(time * 0.01 + i) * 50;
+                const y2 = y + Math.sin(time * 0.01 + i) * 50;
+                ctx.strokeStyle = `hsla(${(i * 10 + time) % 360}, 100%, 50%, 0.5)`;
+                ctx.beginPath();
+                ctx.moveTo(x, y);
+                ctx.lineTo(x2, y2);
+                ctx.stroke();
+            }
+        }
+
+        function drawCosmicWeb() {
+            for (let i = 0; i < 1000; i++) {
+                const x = Math.random() * width;
+                const y = Math.random() * height;
+                ctx.fillStyle = `hsla(${(i + time) % 360}, 100%, 50%, 0.5)`;
+                ctx.beginPath();
+                ctx.arc(x, y, 1, 0, Math.PI * 2);
+                ctx.fill();
+                if (i % 5 === 0) {
+                    const x2 = x + Math.cos(time * 0.01 + i) * 100;
+                    const y2 = y + Math.sin(time * 0.01 + i) * 100;
+                    ctx.beginPath();
+                    ctx.moveTo(x, y);
+                    ctx.lineTo(x2, y2);
+                    ctx.strokeStyle = `hsla(${(i * 10 + time) % 360}, 100%, 50%, 0.2)`;
+                    ctx.stroke();
+                }
+            }
+        }
+
+        function drawPlasma() {
+            const imgData = ctx.createImageData(width, height);
+            for (let x = 0; x < width; x++) {
+                for (let y = 0; y < height; y++) {
+                    const index = (x + y * width) * 4;
+                    const value = Math.sin(x * 0.02 + time * 0.02) + Math.sin(y * 0.02 + time * 0.02);
+                    const color = (value + 2) * 64;
+                    imgData.data[index] = color;
+                    imgData.data[index + 1] = color;
+                    imgData.data[index + 2] = color;
+                    imgData.data[index + 3] = 255;
+                }
+            }
+            ctx.putImageData(imgData, 0, 0);
+        }
+
+        function drawRainbowTunnel() {
+            ctx.save();
+            ctx.translate(width / 2, height / 2);
+            for (let i = 0; i < 360; i += 5) {
+                ctx.beginPath();
+                ctx.arc(0, 0, i * 2, 0, Math.PI * 2);
+                ctx.strokeStyle = `hsl(${(i + time) % 360}, 100%, 50%)`;
+                ctx.lineWidth = 5;
+                ctx.stroke();
+            }
+            ctx.restore();
+        }
+
+        function drawElectricField() {
+            for (let i = 0; i < 1000; i++) {
+                const x = Math.random() * width;
+                const y = Math.random() * height;
+                const length = Math.random() * 50;
+                const angle = Math.random() * Math.PI * 2;
+                ctx.strokeStyle = `hsla(${(i * 10 + time * 5) % 360}, 100%, 50%, 0.5)`;
+                ctx.beginPath();
+                ctx.moveTo(x, y);
+                ctx.lineTo(x + Math.cos(angle) * length, y + Math.sin(angle) * length);
+                ctx.stroke();
+            }
+        }
+
+        function drawFireworks() {
+            if (time % 50 === 0) {
+                initFirework();
+            }
+            updateFireworks();
+        }
+
+        let fireworks = [];
+        function initFirework() {
+            const particles = [];
+            const x = Math.random() * width;
+            const y = Math.random() * height / 2;
+            for (let i = 0; i < 100; i++) {
+                particles.push({
+                    x,
+                    y,
+                    vx: Math.cos(i * (Math.PI * 2) / 100) * Math.random() * 5,
+                    vy: Math.sin(i * (Math.PI * 2) / 100) * Math.random() * 5,
+                    alpha: 1,
+                    hue: Math.random() * 360
+                });
+            }
+            fireworks.push(particles);
+        }
+
+        function updateFireworks() {
+            fireworks.forEach((particles, index) => {
+                particles.forEach(p => {
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.alpha -= 0.01;
+                    ctx.fillStyle = `hsla(${p.hue}, 100%, 50%, ${p.alpha})`;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+                if (particles[0].alpha <= 0) {
+                    fireworks.splice(index, 1);
+                }
+            });
+        }
+
+        function drawLiquidMetal() {
+            const imgData = ctx.createImageData(width, height);
+            for (let x = 0; x < width; x++) {
+                for (let y = 0; y < height; y++) {
+                    const index = (x + y * width) * 4;
+                    const value = Math.sin((x * x + y * y) * 0.00005 + time * 0.02);
+                    const color = (value + 1) * 127;
+                    imgData.data[index] = color;
+                    imgData.data[index + 1] = color;
+                    imgData.data[index + 2] = color;
+                    imgData.data[index + 3] = 255;
+                }
+            }
+            ctx.putImageData(imgData, 0, 0);
+        }
+
+        function drawStarfield() {
+            for (let i = 0; i < 1000; i++) {
+                const z = (i + time * 0.1) % 1000;
+                const x = ((i % 100) - 50) * (1000 / z) + width / 2;
+                const y = (Math.floor(i / 100) - 50) * (1000 / z) + height / 2;
+                ctx.fillStyle = `hsla(${(i + time) % 360}, 100%, 50%, ${(1000 - z) / 1000})`;
+                ctx.beginPath();
+                ctx.arc(x, y, (1000 - z) / 500, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        animate();
+    </script>
+</body>
+</html>
+

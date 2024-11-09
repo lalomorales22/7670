@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Conway's Game of Life</title>
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      background-color: #f0f0f0;
+    }
+    canvas {
+      border: 1px solid #000;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas"></canvas>
+  <script>
+    // Configuration
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const cellSize = 10; // Size of each cell in pixels
+    const gridWidth = 60; // Number of cells horizontally
+    const gridHeight = 40; // Number of cells vertically
+    const aliveColor = '#000'; // Color of alive cells
+    const deadColor = '#fff'; // Color of dead cells
+    const fps = 10; // Frames per second
+
+    // Set canvas dimensions
+    canvas.width = gridWidth * cellSize;
+    canvas.height = gridHeight * cellSize;
+
+    // Initialize grid with random states
+    let grid = createGrid(gridWidth, gridHeight, true);
+
+    // Create a 2D array representing the grid
+    function createGrid(width, height, randomize = false) {
+      const array = new Array(height);
+      for (let y = 0; y < height; y++) {
+        array[y] = new Array(width);
+        for (let x = 0; x < width; x++) {
+          array[y][x] = randomize ? Math.random() > 0.5 : false;
+        }
+      }
+      return array;
+    }
+
+    // Draw the grid on the canvas
+    function drawGrid() {
+      for (let y = 0; y < gridHeight; y++) {
+        for (let x = 0; x < gridWidth; x++) {
+          ctx.fillStyle = grid[y][x] ? aliveColor : deadColor;
+          ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+        }
+      }
+    }
+
+    // Compute the next generation of the grid
+    function nextGeneration() {
+      const newGrid = createGrid(gridWidth, gridHeight);
+      for (let y = 0; y < gridHeight; y++) {
+        for (let x = 0; x < gridWidth; x++) {
+          const aliveNeighbors = countAliveNeighbors(x, y);
+          if (grid[y][x]) {
+            newGrid[y][x] = aliveNeighbors === 2 || aliveNeighbors === 3;
+          } else {
+            newGrid[y][x] = aliveNeighbors === 3;
+          }
+        }
+      }
+      grid = newGrid;
+    }
+
+    // Count the number of alive neighbors for a given cell
+    function countAliveNeighbors(x, y) {
+      let count = 0;
+      for (let j = -1; j <= 1; j++) {
+        for (let i = -1; i <= 1; i++) {
+          if (i === 0 && j === 0) continue;
+          const nx = x + i;
+          const ny = y + j;
+          if (nx >= 0 && nx < gridWidth && ny >= 0 && ny < gridHeight) {
+            count += grid[ny][nx] ? 1 : 0;
+          }
+        }
+      }
+      return count;
+    }
+
+    // Main loop to update and draw the grid
+    function gameLoop() {
+      drawGrid();
+      nextGeneration();
+      setTimeout(gameLoop, 1000 / fps);
+    }
+
+    // Start the game loop
+    gameLoop();
+  </script>
+</body>
+</html>
